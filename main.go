@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sarthak1722/email_service/handlers"
-	"github.com/Sarthak1722/email_service/queue"
+	"github.com/Sarthak1722/email_service/rabbitmq"
 	"github.com/Sarthak1722/email_service/smtp"
 	"github.com/Sarthak1722/email_service/store"
 	"github.com/Sarthak1722/email_service/worker"
@@ -27,11 +27,15 @@ func main() {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	database := store.NewMemoryStore()
 
-	q := queue.New(100)
+	rabbit, err := rabbitmq.New()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("RabbitMQ connected successfully", rabbit)
 
 	sender := worker.NewSender(
 		smtpClient,
-		q,
+		rabbit,
 		database,
 	)
 
@@ -41,7 +45,7 @@ func main() {
 		validate,
 		smtpClient,
 		database,
-		q,
+		rabbit,
 	)
 
 	r := chi.NewRouter()

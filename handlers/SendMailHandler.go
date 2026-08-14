@@ -6,9 +6,11 @@ import (
 
 	"github.com/Sarthak1722/email_service/email"
 	"github.com/Sarthak1722/email_service/mail"
-	"github.com/Sarthak1722/email_service/queue"
+
+
 	"github.com/Sarthak1722/email_service/smtp"
 	"github.com/Sarthak1722/email_service/store"
+	"github.com/Sarthak1722/email_service/rabbitmq"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -18,20 +20,20 @@ type MailHandler struct {
 	validate *validator.Validate
 	smtp     *smtp.Client
 	database *store.MemoryStore
-	queue    *queue.Queue
+	rabbit    *rabbitmq.Client
 }
 
 func NewMailHandler(
 	validate *validator.Validate,
 	smtpClient *smtp.Client,
 	database *store.MemoryStore,
-	queue *queue.Queue,
+	rabbit *rabbitmq.Client,
 ) *MailHandler {
 	return &MailHandler{
 		validate: validate,
 		smtp:     smtpClient,
 		database: database,
-		queue:    queue,
+		rabbit:    rabbit,
 	}
 }
 
@@ -55,7 +57,10 @@ func (h *MailHandler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.queue.Jobs <- job
+	if err := h.rabbit.Publish(job); err != nil {
+		http.Error(w, "Failed to queue email", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{

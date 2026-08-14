@@ -56,7 +56,7 @@ func (c *Client) Send(to, subject, body string, isHTML bool) error {
 	} else {
 		msg.SetBodyString(mail.TypeTextPlain, body)
 	}
-
+	
 	if err := c.client.DialAndSend(msg); err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
